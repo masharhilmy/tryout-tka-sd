@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Tryout TKA SD 2026 - Portal Resmi</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.autotable.min.js"></script>
+
+    <style>
+        .kemdikbud-blue { background-color: #00549b; }
+        .kemdikbud-yellow { background-color: #fdb913; }
+        .font-mono-digital { font-family: 'Courier New', Courier, monospace; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <header class="kemdikbud-blue text-white p-4 shadow-lg sticky top-0 z-[100]">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/9c/Logo_Kemdikbud.png" alt="Logo" class="h-10 bg-white p-1 rounded">
+                <div>
+                    <h1 class="text-lg font-bold leading-none">TRYOUT TKA SD</h1>
+                    <p class="text-xs text-blue-200">Kementerian Pendidikan, Kebudayaan, Riset, dan Teknologi</p>
+                </div>
+            </div>
+            <div id="user-info" class="hidden text-right">
+                <p id="display-name" class="font-bold text-sm"></p>
+                <button onclick="location.reload()" class="text-xs text-yellow-400 underline">Keluar Sistem</button>
+            </div>
+        </div>
+    </header>
+
+    <section id="page-login" class="container mx-auto mt-16 px-4">
+        <div class="max-w-md mx-auto bg-white rounded-xl shadow-2xl border-t-8 border-yellow-500 overflow-hidden">
+            <div class="p-8">
+                <h2 class="text-2xl font-black text-center text-gray-800 mb-6">LOGIN PORTAL UJIAN</h2>
+                <div class="flex bg-gray-100 p-1 rounded-lg mb-6">
+                    <button onclick="switchRole('siswa')" id="btn-tab-siswa" class="flex-1 py-2 rounded-md font-bold text-sm kemdikbud-yellow text-white">SISWA</button>
+                    <button onclick="switchRole('proktor')" id="btn-tab-proktor" class="flex-1 py-2 rounded-md font-bold text-sm text-gray-500">PROKTOR</button>
+                </div>
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label id="label-user" class="block text-xs font-bold text-gray-600 uppercase mb-1">Username Siswa</label>
+                        <input type="text" id="username" required class="w-full border-2 border-gray-200 rounded-lg p-3 focus:border-blue-500 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Password / Kode Akses</label>
+                        <input type="password" required class="w-full border-2 border-gray-200 rounded-lg p-3 focus:border-blue-500 outline-none transition">
+                    </div>
+                    <button type="submit" class="w-full kemdikbud-blue text-white font-black py-4 rounded-lg hover:bg-blue-800 transition-all shadow-lg">MASUK KE DASHBOARD</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section id="page-siswa" class="hidden">
+        <div id="timer-bar" class="kemdikbud-yellow text-white px-6 py-3 flex justify-between items-center sticky top-[72px] z-50 shadow-md">
+            <div class="flex items-center gap-2">
+                <span class="animate-pulse h-3 w-3 bg-white rounded-full"></span>
+                <span class="font-bold uppercase tracking-widest text-sm">Sisa Waktu:</span>
+            </div>
+            <div id="countdown" class="text-3xl font-black font-mono-digital">00:00:00</div>
+        </div>
+        <div class="container mx-auto p-4">
+            <div class="bg-white rounded-lg shadow-xl overflow-hidden h-[85vh] relative">
+                <iframe id="google-form" src="URL_GOOGLE_FORM_ANDA" width="100%" height="100%" frameborder="0">Memuat Soal...</iframe>
+            </div>
+        </div>
+    </section>
+
+    <section id="page-proktor" class="hidden container mx-auto p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-md border-b-4 border-blue-600">
+                    <h3 class="font-black text-gray-800 mb-4 uppercase text-sm">Kontrol Ujian</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 block mb-1">SET DURASI (MENIT)</label>
+                            <input type="number" id="input-durasi" class="w-full border-2 p-2 rounded" placeholder="Contoh: 90">
+                        </div>
+                        <button onclick="setTimer()" class="w-full bg-green-600 text-white font-bold py-2 rounded hover:bg-green-700 shadow">MULAI UJIAN</button>
+                        <button onclick="triggerForceStop()" class="w-full bg-red-600 text-white font-bold py-2 rounded hover:bg-red-800 shadow mt-4">PAKSA BERHENTI</button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 p-4 rounded-xl shadow-lg">
+                    <h3 class="text-green-400 font-mono text-xs mb-3 uppercase">// Log Aktivitas</h3>
+                    <div id="log-list" class="font-mono text-[10px] text-green-500 h-64 overflow-y-auto space-y-1">
+                        <div>> System ready...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 space-y-6">
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+                        <p class="text-xs text-gray-400 font-bold">PESERTA</p>
+                        <h4 id="stat-total" class="text-2xl font-black">0</h4>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+                        <p class="text-xs text-gray-400 font-bold">RATA-RATA</p>
+                        <h4 id="stat-avg" class="text-2xl font-black">0</h4>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
+                        <p class="text-xs text-gray-400 font-bold">TERTINGGI</p>
+                        <h4 id="stat-max" class="text-2xl font-black">0</h4>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <div class="flex flex-col md:flex-row justify-between gap-4 mb-6">
+                        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cari nama siswa..." class="border-2 rounded-lg px-4 py-2 w-full md:w-1/2 outline-none focus:border-blue-500">
+                        <button onclick="exportToPDF()" class="bg-red-600 text-white px-6 py-2 rounded-lg font-bold text-sm flex items-center gap-2">
+                            EKSPOR PDF
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table id="tabel-hasil" class="w-full text-left">
+                            <thead class="bg-gray-50 border-b">
+                                <tr class="text-xs font-bold text-gray-500 uppercase">
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3 text-center">Skor</th>
+                                    <th class="p-3">Waktu Selesai</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body" class="text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="warning-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full border-t-8 border-red-600 animate-bounce">
+            <h3 class="text-2xl font-black text-red-600 mb-2 uppercase text-center">Peringatan!</h3>
+            <p class="text-center text-gray-600 mb-6">Waktu pengerjaan tersisa kurang dari <b>5 menit</b>. Segera kirim jawaban Anda!</p>
+            <button onclick="closeWarning()" class="w-full bg-gray-900 text-white py-3 rounded-xl font-bold">SAYA MENGERTI</button>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI ---
+        let currentRole = 'siswa';
+        const csvUrl = 'URL_CSV_GOOGLE_SHEETS_ANDA';
+        const logChannel = new BroadcastChannel('tka_logging');
+        const ctrlChannel = new BroadcastChannel('tka_control');
+        let warningShowed = false;
+
+        // --- SISTEM LOGIN & NAVIGASI ---
+        function switchRole(role) {
+            currentRole = role;
+            const isSiswa = role === 'siswa';
+            document.getElementById('btn-tab-siswa').className = isSiswa ? "flex-1 py-2 rounded-md font-bold text-sm kemdikbud-yellow text-white" : "flex-1 py-2 rounded-md font-bold text-sm text-gray-500";
+            document.getElementById('btn-tab-proktor').className = !isSiswa ? "flex-1 py-2 rounded-md font-bold text-sm kemdikbud-yellow text-white" : "flex-1 py-2 rounded-md font-bold text-sm text-gray-500";
+            document.getElementById('label-user').innerText = isSiswa ? "Username Siswa" : "Username Sekolah";
+        }
+
+        document.getElementById('loginForm').onsubmit = (e) => {
+            e.preventDefault();
+            const user = document.getElementById('username').value;
+            document.getElementById('page-login').classList.add('hidden');
+            document.getElementById('user-info').classList.remove('hidden');
+            document.getElementById('display-name').innerText = user;
+
+            if(currentRole === 'siswa') {
+                document.getElementById('page-siswa').classList.remove('hidden');
+                sendLog('Masuk ke Ujian');
+                startCountdown();
+            } else {
+                document.getElementById('page-proktor').classList.remove('hidden');
+                loadData();
+            }
+        };
+
+        // --- SISTEM PROKTOR (DATA) ---
+        function loadData() {
+            Papa.parse(csvUrl, {
+                download: true, header: true,
+                complete: (results) => {
+                    const data = results.data;
+                    const body = document.getElementById('table-body');
+                    const scores = [];
+                    body.innerHTML = '';
+                    
+                    data.forEach(row => {
+                        const s = parseInt(row.Score) || 0;
+                        scores.push(s);
+                        body.innerHTML += `<tr class="border-b">
+                            <td class="p-3 font-bold text-gray-700">${row.Nama || 'N/A'}</td>
+                            <td class="p-3 text-center text-blue-600 font-black">${s}</td>
+                            <td class="p-3 text-gray-400 text-xs">${row.Timestamp || '-'}</td>
+                        </tr>`;
+                    });
+
+                    document.getElementById('stat-total').innerText = data.length;
+                    document.getElementById('stat-avg').innerText = data.length ? (scores.reduce((a,b)=>a+b)/data.length).toFixed(1) : 0;
+                    document.getElementById('stat-max').innerText = data.length ? Math.max(...scores) : 0;
+                }
+            });
+        }
+
+        function filterTable() {
+            const val = document.getElementById('searchInput').value.toUpperCase();
+            const rows = document.getElementById('tabel-hasil').getElementsByTagName('tr');
+            for (let i = 1; i < rows.length; i++) {
+                rows[i].style.display = rows[i].innerText.toUpperCase().includes(val) ? "" : "none";
+            }
+        }
+
+        // --- SISTEM TIMER & CONTROL ---
+        function setTimer() {
+            const m = document.getElementById('input-durasi').value;
+            if(!m) return alert("Isi durasi!");
+            const end = new Date().getTime() + (m * 60 * 1000);
+            localStorage.setItem('tka_exam_end', end);
+            ctrlChannel.postMessage({ command: 'START' });
+            alert("Timer dimulai!");
+        }
+
+        function triggerForceStop() {
+            if(confirm("Hentikan paksa semua siswa?")) ctrlChannel.postMessage({ command: 'FORCE_STOP' });
+        }
+
+        function startCountdown() {
+            const timerDisplay = document.getElementById('countdown');
+            setInterval(() => {
+                const end = localStorage.getItem('tka_exam_end');
+                if(!end) return timerDisplay.innerText = "00:00:00";
+                
+                const diff = end - new Date().getTime();
+                if(diff <= 0) {
+                    timerDisplay.innerText = "HABIS";
+                    document.getElementById('google-form').remove();
+                    return;
+                }
+
+                if(diff < 300000 && !warningShowed) {
+                    document.getElementById('warning-modal').classList.remove('hidden');
+                    document.getElementById('timer-bar').classList.replace('kemdikbud-yellow', 'bg-red-600');
+                    warningShowed = true;
+                }
+
+                const h = Math.floor(diff/(1000*60*60));
+                const m = Math.floor((diff%(1000*60*60))/(1000*60));
+                const s = Math.floor((diff%(1000*60))/1000);
+                timerDisplay.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            }, 1000);
+        }
+
+        function closeWarning() { document.getElementById('warning-modal').classList.add('hidden'); }
+
+        // --- LOGGING & BROADCAST ---
+        function sendLog(msg) {
+            logChannel.postMessage({ nama: document.getElementById('display-name').innerText, aksi: msg, waktu: new Date().toLocaleTimeString() });
+        }
+
+        logChannel.onmessage = (e) => {
+            const list = document.getElementById('log-list');
+            if(list) {
+                const div = document.createElement('div');
+                div.innerHTML = `> [${e.data.waktu}] ${e.data.nama}: ${e.data.aksi}`;
+                list.prepend(div);
+            }
+        };
+
+        ctrlChannel.onmessage = (e) => {
+            if(e.data.command === 'FORCE_STOP') {
+                localStorage.removeItem('tka_exam_end');
+                alert("Ujian dihentikan oleh proktor!");
+                location.reload();
+            }
+        };
+
+        // --- EXPORT PDF ---
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("LAPORAN HASIL TRYOUT TKA SD 2026", 14, 20);
+            doc.autoTable({ html: '#tabel-hasil', startY: 30, theme: 'grid', headStyles: {fillColor: [0, 84, 155]} });
+            doc.save('Hasil_Ujian.pdf');
+        }
+    </script>
+</body>
+</html>
